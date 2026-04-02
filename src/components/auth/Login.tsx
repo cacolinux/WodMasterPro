@@ -1,12 +1,52 @@
 import React from 'react';
-import { Dumbbell, ArrowRight, Github, Mail } from 'lucide-react';
+import { Dumbbell, ArrowRight, Github, Mail, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
+import { supabase } from '@/lib/supabase';
 
-export function Login({ onLogin }: { onLogin: () => void }) {
+export function Login() {
+  const [isSignUp, setIsSignUp] = React.useState(false);
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [fullName, setFullName] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (isSignUp) {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: fullName,
+            },
+          },
+        });
+        if (error) throw error;
+        alert('Check your email for the confirmation link!');
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background Glows */}
@@ -33,63 +73,116 @@ export function Login({ onLogin }: { onLogin: () => void }) {
 
         <Card className="bg-zinc-900 border-zinc-800 shadow-2xl">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-zinc-100">Sign in</CardTitle>
+            <CardTitle className="text-2xl font-bold text-zinc-100">
+              {isSignUp ? 'Create an account' : 'Sign in'}
+            </CardTitle>
             <CardDescription className="text-zinc-400">
-              Enter your credentials to access your dashboard.
+              {isSignUp 
+                ? 'Enter your details to join the community.' 
+                : 'Enter your credentials to access your dashboard.'}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-zinc-400">Email</Label>
-              <Input 
-                id="email" 
-                type="email" 
-                placeholder="name@example.com" 
-                className="bg-zinc-950 border-zinc-800 text-zinc-100 focus:ring-zinc-700"
-              />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-zinc-400">Password</Label>
-                <button className="text-xs text-zinc-500 hover:text-zinc-100 transition-colors">
-                  Forgot password?
-                </button>
-              </div>
-              <Input 
-                id="password" 
-                type="password" 
-                className="bg-zinc-950 border-zinc-800 text-zinc-100 focus:ring-zinc-700"
-              />
-            </div>
-            <Button 
-              onClick={onLogin}
-              className="w-full bg-zinc-100 text-zinc-950 hover:bg-zinc-200 font-bold h-11"
-            >
-              Sign In <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-4">
+              <AnimatePresence mode="wait">
+                {isSignUp && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-2"
+                  >
+                    <Label htmlFor="fullName" className="text-zinc-400">Full Name</Label>
+                    <Input 
+                      id="fullName" 
+                      type="text" 
+                      required
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="John Doe" 
+                      className="bg-zinc-950 border-zinc-800 text-zinc-100 focus:ring-zinc-700"
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-            <div className="relative py-4">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-zinc-800" />
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-zinc-400">Email</Label>
+                <Input 
+                  id="email" 
+                  type="email" 
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@example.com" 
+                  className="bg-zinc-950 border-zinc-800 text-zinc-100 focus:ring-zinc-700"
+                />
               </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-zinc-900 px-2 text-zinc-500">Or continue with</span>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-zinc-400">Password</Label>
+                  {!isSignUp && (
+                    <button type="button" className="text-xs text-zinc-500 hover:text-zinc-100 transition-colors">
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
+                <Input 
+                  id="password" 
+                  type="password" 
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="bg-zinc-950 border-zinc-800 text-zinc-100 focus:ring-zinc-700"
+                />
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <Button variant="outline" className="border-zinc-800 bg-zinc-950 text-zinc-100 hover:bg-zinc-800">
-                <Github className="mr-2 h-4 w-4" /> Github
+              {error && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-xs text-center">
+                  {error}
+                </div>
+              )}
+
+              <Button 
+                type="submit"
+                disabled={loading}
+                className="w-full bg-zinc-100 text-zinc-950 hover:bg-zinc-200 font-bold h-11"
+              >
+                {loading ? (
+                  <Loader2 className="animate-spin h-5 w-5" />
+                ) : (
+                  <>
+                    {isSignUp ? 'Sign Up' : 'Sign In'} <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
               </Button>
-              <Button variant="outline" className="border-zinc-800 bg-zinc-950 text-zinc-100 hover:bg-zinc-800">
-                <Mail className="mr-2 h-4 w-4" /> Google
-              </Button>
-            </div>
-          </CardContent>
+
+              <div className="relative py-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-zinc-800" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-zinc-900 px-2 text-zinc-500">Or continue with</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <Button type="button" variant="outline" className="border-zinc-800 bg-zinc-950 text-zinc-100 hover:bg-zinc-800">
+                  <Github className="mr-2 h-4 w-4" /> Github
+                </Button>
+                <Button type="button" variant="outline" className="border-zinc-800 bg-zinc-950 text-zinc-100 hover:bg-zinc-800">
+                  <Mail className="mr-2 h-4 w-4" /> Google
+                </Button>
+              </div>
+            </CardContent>
+          </form>
           <CardFooter className="flex flex-wrap items-center justify-center gap-1 text-sm text-zinc-500">
-            Don't have an account? 
-            <button className="text-zinc-100 font-medium hover:underline underline-offset-4">
-              Sign up for free
+            {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+            <button 
+              onClick={() => setIsSignUp(!isSignUp)}
+              className="text-zinc-100 font-medium hover:underline underline-offset-4"
+            >
+              {isSignUp ? 'Sign in' : 'Sign up for free'}
             </button>
           </CardFooter>
         </Card>
@@ -104,3 +197,4 @@ export function Login({ onLogin }: { onLogin: () => void }) {
     </div>
   );
 }
+

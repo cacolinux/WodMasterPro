@@ -60,12 +60,12 @@ export function useWODStore() {
     // Set up real-time subscriptions
     const wodsSubscription = supabase
       .channel('wods_channel')
-      .on('postgres_changes', { event: '*', table: 'wods' }, () => fetchWods())
+      .on('postgres_changes' as any, { event: '*', table: 'wods' }, () => fetchWods())
       .subscribe();
 
     const resultsSubscription = supabase
       .channel('results_channel')
-      .on('postgres_changes', { event: '*', table: 'results' }, () => fetchResults())
+      .on('postgres_changes' as any, { event: '*', table: 'results' }, () => fetchResults())
       .subscribe();
 
     return () => {

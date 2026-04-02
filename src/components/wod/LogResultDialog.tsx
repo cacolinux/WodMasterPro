@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useWODStore, WOD } from '@/lib/store';
+import { supabase } from '@/lib/supabase';
+import { Loader2 } from 'lucide-react';
 
 interface LogResultDialogProps {
   wod: WOD;
@@ -23,14 +25,21 @@ export function LogResultDialog({ wod, isOpen, onOpenChange }: LogResultDialogPr
   const [score, setScore] = React.useState('');
   const [rx, setRx] = React.useState(true);
   const [notes, setNotes] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
 
-  const handleLogResult = () => {
-    if (score) {
-      addResult({
+  const handleLogResult = async () => {
+    if (!score) return;
+    
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      await addResult({
         wod_id: wod.id,
-        athlete_id: 'me', // In a real app, this would be the logged-in user's ID
-        athlete_name: 'Alex Johnson', // Mock user name
-        athlete_avatar: 'https://i.pravatar.cc/150?u=1',
+        athlete_id: user.id,
+        athlete_name: user.user_metadata.full_name || user.email?.split('@')[0] || 'Athlete',
+        athlete_avatar: `https://i.pravatar.cc/150?u=${user.id}`,
         score,
         rx,
         date: new Date().toISOString(),
@@ -39,6 +48,10 @@ export function LogResultDialog({ wod, isOpen, onOpenChange }: LogResultDialogPr
       onOpenChange(false);
       setScore('');
       setNotes('');
+    } catch (error) {
+      console.error('Error logging result:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -109,9 +122,10 @@ export function LogResultDialog({ wod, isOpen, onOpenChange }: LogResultDialogPr
           </Button>
           <Button 
             onClick={handleLogResult}
+            disabled={loading}
             className="bg-zinc-100 text-zinc-950 hover:bg-zinc-200 font-bold"
           >
-            Save Result
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Result'}
           </Button>
         </DialogFooter>
       </DialogContent>
