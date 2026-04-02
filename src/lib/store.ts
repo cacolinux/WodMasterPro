@@ -118,4 +118,18 @@ export function useWODStore() {
  * -- Enable Realtime
  * ALTER PUBLICATION supabase_realtime ADD TABLE wods;
  * ALTER PUBLICATION supabase_realtime ADD TABLE results;
+ * 
+ * -- Enable RLS
+ * ALTER TABLE wods ENABLE ROW LEVEL SECURITY;
+ * ALTER TABLE results ENABLE ROW LEVEL SECURITY;
+ * 
+ * -- WODs Policies
+ * CREATE POLICY "WODs are viewable by everyone" ON wods FOR SELECT USING (true);
+ * CREATE POLICY "Authenticated users can manage WODs" ON wods FOR ALL TO authenticated USING (true);
+ * 
+ * -- Results Policies
+ * CREATE POLICY "Results are viewable by everyone" ON results FOR SELECT USING (true);
+ * CREATE POLICY "Athletes can insert their own results" ON results FOR INSERT TO authenticated WITH CHECK (auth.uid()::text = athlete_id);
+ * CREATE POLICY "Athletes can update their own results" ON results FOR UPDATE TO authenticated USING (auth.uid()::text = athlete_id);
+ * CREATE POLICY "Athletes can delete their own results" ON results FOR DELETE TO authenticated USING (auth.uid()::text = athlete_id);
  */
